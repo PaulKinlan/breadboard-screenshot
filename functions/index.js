@@ -16,36 +16,79 @@ const puppeteer = require("puppeteer");
 
 process.env.PUPPETEER_CACHE_DIR = process.env.NODE_PATH + "/.puppeteer_cache";
 
-exports.helloWorld = onRequest(
+const onScreenShot = onRequest(
   {
     memory: "2GiB",
   },
   async (request, response) => {
-    const { url } = request.query;
+    const { url, size, element } = request.query;
 
     if (!url) {
-      response.status(400).send("URL is required");
-      return;
+      return response
+        .status(400)
+        .send("Please provide a URL. Example: ?url=https://example.com");
     }
 
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
+    // Default to a reasonably large viewport for full page screenshots.
+    const viewport = {
+      width: 1280,
+      height: 1024,
+      deviceScaleFactor: 2,
+    };
 
-    // Navigate the page to a URL
-    await page.goto(url);
+    let fullPage = true;
+    if (size) {
+      const [width, height] = size.split(",").map((item) => Number(item));
+      if (!(isFinite(width) && isFinite(height))) {
+        return response
+          .status(400)
+          .send("Malformed size parameter. Example: ?size=800,600");
+      }
+      viewport.width = width;
+      viewport.height = height;
 
-    // Set screen size
-    await page.setViewport({ width: 1080, height: 1024 });
+      fullPage = false;
+    }
 
-    const data = await page.screenshot({ encoding: "binary" });
+    try {
+      const browser = await puppeteer.launch();
+      const page = await browser.newPage();
 
-    await browser.close();
-    response.writeHead(200, {
-      "Content-Disposition": "attachment;filename=screenshot.png",
-      "Content-Type": "image/png",
-      "Content-Length": data.length,
-      "Access-Control-Expose-Headers": "Content-Disposition",
-    });
-    response.end(data);
+      await page.goto(url, { waitUntil: "networkidle0" });
+
+      // Set screen size
+      await page.setViewport(viewport);
+
+      const opts = {
+        fullPage,
+        encoding: "binary",
+        // omitBackground: true
+      };
+
+      if (!fullPage) {
+        opts.clip = {
+          x: 0,
+          y: 0,
+          width: viewport.width,
+          height: viewport.height,
+        };
+      }
+
+      if (element) {
+        const elementHandle = await page.$(element);
+        if (!elementHandle) {
+          return response.status(404).send(`Element ${element} not found`);
+        }
+        buffer = await elementHandle.screenshot();
+      } else {
+        buffer = await page.screenshot(opts);
+      }
+      response.type("image/png").send(buffer);
+    } catch (err) {
+      response.status(500).send(err.toString());
+    }
   }
 );
+
+exports.helloWorld = onScreenShot;
+exports.onScreenShot = onScreenShot;
