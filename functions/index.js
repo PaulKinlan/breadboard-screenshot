@@ -21,7 +21,7 @@ const onScreenShot = onRequest(
     memory: "2GiB",
   },
   async (request, response) => {
-    const { url, size, element } = request.query;
+    const { url, size, element, isMobile = false } = request.query;
 
     if (!url) {
       return response
@@ -46,6 +46,7 @@ const onScreenShot = onRequest(
       }
       viewport.width = width;
       viewport.height = height;
+      viewport.isMobile = isMobile;
 
       fullPage = false;
     }
