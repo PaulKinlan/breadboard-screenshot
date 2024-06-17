@@ -15,6 +15,7 @@ const puppeteer = require("puppeteer");
 // https://firebase.google.com/docs/functions/get-started
 
 process.env.PUPPETEER_CACHE_DIR = process.env.NODE_PATH + "/.puppeteer_cache";
+let browser;
 
 const onScreenShot = onRequest(
   {
@@ -52,7 +53,9 @@ const onScreenShot = onRequest(
     }
 
     try {
-      const browser = await puppeteer.launch();
+      if (!browser) {
+        browser = await puppeteer.launch(); // There might be a race here...
+      }
       const page = await browser.newPage();
 
       // Set screen size
@@ -84,6 +87,8 @@ const onScreenShot = onRequest(
       } else {
         buffer = await page.screenshot(opts);
       }
+      page.close();
+      response.set("Cache-Control", "public, max-age=300, s-maxage=600");
       response.type("image/png").send(buffer);
     } catch (err) {
       response.status(500).send(err.toString());
