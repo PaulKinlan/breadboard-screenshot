@@ -46,7 +46,7 @@ const onScreenShot = onRequest(
       }
       viewport.width = width;
       viewport.height = height;
-      viewport.isMobile = isMobile;
+      viewport.isMobile = isMobile == "true";
 
       fullPage = false;
     }
@@ -55,10 +55,10 @@ const onScreenShot = onRequest(
       const browser = await puppeteer.launch();
       const page = await browser.newPage();
 
-      await page.goto(url, { waitUntil: "networkidle0" });
-
       // Set screen size
       await page.setViewport(viewport);
+
+      await page.goto(url, { waitUntil: "networkidle0" });
 
       const opts = {
         fullPage,
