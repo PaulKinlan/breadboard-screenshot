@@ -15,7 +15,6 @@ const puppeteer = require("puppeteer");
 // https://firebase.google.com/docs/functions/get-started
 
 process.env.PUPPETEER_CACHE_DIR = process.env.NODE_PATH + "/.puppeteer_cache";
-let browser;
 
 const onScreenShot = onRequest(
   {
@@ -53,15 +52,14 @@ const onScreenShot = onRequest(
     }
 
     try {
-      if (!browser) {
-        browser = await puppeteer.launch(); // There might be a race here...
-      }
+      let browser = await puppeteer.launch(); // There might be a race here...
+
       const page = await browser.newPage();
 
       // Set screen size
       await page.setViewport(viewport);
 
-      await page.goto(url, { waitUntil: "networkidle0" });
+      await page.goto(url, { waitUntil: "networkidle2" });
 
       const opts = {
         fullPage,
